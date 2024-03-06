@@ -3,4 +3,5 @@ onnx/*/*.onnx
 openvino/utils/*.onnx
 .env
 .idea/
+.venv*
 __pycache__

@@ -1,3 +1,7 @@
+import atexit
+import logging
+import time
+
 from dotenv import load_dotenv
 import os
 import sys
@@ -6,8 +10,8 @@ import uvicorn
 import numpy as np
 import cv2
 import asyncio
-from paddleocr import PaddleOCR
 import torch
+from paddleocr import PaddleOCR
 from PIL import Image, ImageFile
 from io import BytesIO
 from pydantic import BaseModel
@@ -57,7 +61,7 @@ async def check_inactive():
     await asyncio.sleep(300)
     restart_program()
 
-@app.middleware("http")
+# @app.middleware("http")
 async def check_activity(request, call_next):
     global inactive_task
     if inactive_task:
@@ -135,11 +139,13 @@ async def process_image(file: UploadFile = File(...), api_key: str = Depends(ver
 
 @app.post("/clip/img")
 async def clip_process_image(file: UploadFile = File(...), api_key: str = Depends(verify_header)):
+    # start_time = time.time()
     load_clip_model()
     image_bytes = await file.read()
     try:
         image = clip_processor(Image.open(BytesIO(image_bytes))).unsqueeze(0).to(device)
         image_features = clip_model.encode_image(image)
+        # print(f"<<<< 耗时: {round(time.time() - start_time, 3)} - {file.filename}")
         return {'result': ["{:.16f}".format(vec) for vec in image_features[0]]}
     except Exception as e:
         print(e)
@@ -162,4 +168,8 @@ def restart_program():
 
 
 if __name__ == "__main__":
-    uvicorn.run("server:app", host="0.0.0.0", port=8000)
+    try:
+        uvicorn.run("server:app", host="0.0.0.0", port=8000)
+    except Exception as e:
+        logging.exception("捕获异常 %s", e)
+
